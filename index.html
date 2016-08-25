@@ -1,0 +1,110 @@
+<html>
+<head>
+<title>smart outlet</title>
+<style>
+input[type=text] {
+  width:90px;
+}
+#offline {
+  text-align: center;
+  color: red;
+}
+</style>
+<script>
+var values = [false, false, false];
+
+function sendValue(value){
+  ws.send(value);
+  console.log("sent: "+value);
+}
+
+function setup() {
+  window.WebSocket = window.WebSocket || window.MozWebSocket;
+  ip = window.location.hostname;
+  ws = new WebSocket('ws://'+ip+':8083/ws');
+
+  ws.onopen = function () {
+    document.getElementById("offline").style.display = "none";
+  };
+
+  ws.onmessage = function (evt) {
+    console.log("recived: "+evt.data);
+    data = evt.data.split("_");
+    updateButton(data[0],((data[1] == "1") ? true : false));
+  };
+
+  ws.onclose = function () {
+    document.getElementById("offline").style.display = "block";
+  };
+}
+function updateButton(num,value) {
+  values[num] = value;
+  if (value) {
+    document.getElementById("v"+num).innerHTML = "ON";
+    document.getElementById("b"+num).value = "Turn OFF?";
+  } else {
+    document.getElementById("v"+num).innerHTML = "OFF";
+    document.getElementById("b"+num).value = "Turn ON?";
+  }
+}
+
+function add(){
+  type = document.getElementById("type").value;
+  date = document.getElementById("date").value;
+  Sdate = date.split("/");
+  time = document.getElementById("time").value;
+  Stime = time.split(":");
+  if (Stime.length != 3) {return}
+  plug = document.getElementById("plug").value;
+  state = document.getElementById("state").value;
+  Sstate = (state == "on") ? 1 :0;
+  rules = document.getElementById("rules");
+  if (type == "on") {
+    if (Sdate.length != 3) {return}
+    sendValue(plug+"_"+Sstate+"_on_"+Sdate[0]+"_"+Sdate[1]+"_"+Sdate[2]+"_"+Stime[0]+"_"+Stime[1]+"_"+Stime[2]);
+    rules.innerHTML += "<br>plug <b>"+(Number(plug)+1)+"</b> will turn <b>"+state+"</b> on "+date+" at "+ time;
+  } else {
+    sendValue(plug+"_"+Sstate+"_in_"+Stime[0]+"_"+Stime[1]+"_"+Stime[2]);
+    rules.innerHTML += "<br>plug <b>"+(Number(plug)+1)+"</b> will turn <b>"+state+"</b> in "+ time;
+  }
+}
+
+function disable() {
+  type = document.getElementById("type").value;
+  document.getElementById("date").disabled = (type == "in");
+}
+</script>
+</head>
+<body onload="setup()">
+<h1 id="offline">NOT CONNECTED!</h1>
+outlet 1 is <b><span id="v0">OFF</span></b>: 
+<input type="button" id="b0" value="turn ON?" onClick="sendValue('0_'+((values[0] == true) ? '0' : '1'));"><br>
+
+outlet 2 is <b><span id="v1">OFF</span></b>: 
+<input type="button" id="b1" value="turn ON?" onClick="sendValue('1_'+((values[1] == true) ? '0' : '1'));"><br>
+
+outlet 3 is <b><span id="v2">OFF</span></b>: 
+<input type="button" id="b2" value="turn ON?" onClick="sendValue('2_'+((values[2] == true) ? '0' : '1'));">
+<br>
+<br>
+<select id="type" onchange="disable();">
+<option value="on">At Time</option>
+<option value="in">In Time</option>
+</select>
+ plug #:
+<select id="plug">
+<option value="0">1</option>
+<option value="1">2</option>
+<option value="2">3</option>
+</select>
+ value: <select id="state">
+<option value="on">on</option>
+<option value="off">off</option>
+</select><br>
+Date (yyyy/mm/dd):<input type="text" id="date">
+Time (hh:mm:ss):<input type="text" id="time">
+<input type="submit" onclick="add()" value="Add">
+<div id="rules">
+</div>
+</body>
+</html>
