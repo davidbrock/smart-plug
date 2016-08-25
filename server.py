@@ -2,16 +2,15 @@ import tornado.ioloop
 import tornado.web
 import tornado.httpserver
 import tornado.websocket
-import RPi.GPIO as GPIO
+import CHIP_IO.GPIO as GPIO
 import urllib
 import time
 import datetime
 
-inputs = [23,24,25]
-outputs = [4,17,27]
+inputs = ["XIO-P3","XIO-P4","XIO-P5"]
+outputs = ["XIO-P0","XIO-P1","XIO-P2"]
 states = [True,True,True]
 old = [True,True,True]
-GPIO.setmode(GPIO.BCM)
 GPIO.setup(outputs,GPIO.OUT)
 GPIO.setup(inputs,GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.output(outputs,states)
