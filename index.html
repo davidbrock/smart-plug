@@ -1,6 +1,6 @@
 <html>
 <head>
-<title>smart outlet</title>
+  <title>smart outlet</title>
 <style>
 input[type=text] {
   width:90px;
@@ -76,35 +76,34 @@ function disable() {
 </script>
 </head>
 <body onload="setup()">
-<h1 id="offline">NOT CONNECTED!</h1>
-outlet 1 is <b><span id="v0">OFF</span></b>: 
-<input type="button" id="b0" value="turn ON?" onClick="sendValue('0_'+((values[0] == true) ? '0' : '1'));"><br>
+  <h1 id="offline">NOT CONNECTED!</h1>
+  outlet 1 is <b><span id="v0">OFF</span></b>: 
+  <input type="button" id="b0" value="turn ON?" onClick="sendValue('0_'+((values[0] == true) ? '0' : '1'));"><br>
 
-outlet 2 is <b><span id="v1">OFF</span></b>: 
-<input type="button" id="b1" value="turn ON?" onClick="sendValue('1_'+((values[1] == true) ? '0' : '1'));"><br>
+  outlet 2 is <b><span id="v1">OFF</span></b>: 
+  <input type="button" id="b1" value="turn ON?" onClick="sendValue('1_'+((values[1] == true) ? '0' : '1'));"><br>
 
-outlet 3 is <b><span id="v2">OFF</span></b>: 
-<input type="button" id="b2" value="turn ON?" onClick="sendValue('2_'+((values[2] == true) ? '0' : '1'));">
-<br>
-<br>
-<select id="type" onchange="disable();">
-<option value="on">At Time</option>
-<option value="in">In Time</option>
-</select>
- plug #:
-<select id="plug">
-<option value="0">1</option>
-<option value="1">2</option>
-<option value="2">3</option>
-</select>
- value: <select id="state">
-<option value="on">on</option>
-<option value="off">off</option>
-</select><br>
-Date (yyyy/mm/dd):<input type="text" id="date">
-Time (hh:mm:ss):<input type="text" id="time">
-<input type="submit" onclick="add()" value="Add">
-<div id="rules">
-</div>
+  outlet 3 is <b><span id="v2">OFF</span></b>: 
+  <input type="button" id="b2" value="turn ON?" onClick="sendValue('2_'+((values[2] == true) ? '0' : '1'));"><br>
+  <br>
+  <select id="type" onchange="disable();">
+    <option value="on">At Time</option>
+    <option value="in">In Time</option>
+  </select>
+  plug #:
+  <select id="plug">
+    <option value="0">1</option>
+    <option value="1">2</option>
+    <option value="2">3</option>
+  </select>
+  value: <select id="state">
+    <option value="on">on</option>
+    <option value="off">off</option>
+  </select><br>
+  Date (yyyy/mm/dd):<input type="text" id="date">
+  Time (hh:mm:ss):<input type="text" id="time">
+  <input type="submit" onclick="add()" value="Add">
+  <div id="rules">
+  </div>
 </body>
 </html>
