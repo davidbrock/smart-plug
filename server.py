@@ -9,19 +9,20 @@ import datetime
 
 inputs = [23,24,25]
 outputs = [4,17,27]
-states = [True,True,True]
 old = [True,True,True]
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(outputs,GPIO.OUT)
 GPIO.setup(inputs,GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-GPIO.output(outputs,states)
+GPIO.output(outputs,True)
 states = [False,False,False]
 
 clients = []
+rules = []
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        self.write(open("index.html").read())
+        f = open("/home/pi/smart-plug/index.html").read()
+        self.write(f)
 
 class WSHandler(tornado.websocket.WebSocketHandler):
     def check_origin(self, origin):
@@ -36,20 +37,41 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         print('received message: %s' %message)
         data = message.split("_")
-        value = int(data[1])
-        pin = int(data[0])
-        if len(data) == 2:
+        id = data[0]
+        data = data[1:]
+        if id == "exit":
+            ioloop.add_callback(ioloop.stop)
+        if id == "set":
+            value = int(data[1])
+            pin = int(data[0])
             change_pin(pin,value)
-        elif data[2] == "on":
+        elif id == "remove":
+            ioloop.remove_timeout(rules[int(data[0])])
+            rules.pop(int(data[0]))
+            send_message("remove_"+data[0])
+        elif id == "ruleon":
+            value = int(data[1])
+            pin = int(data[0])
             timestamp = time.mktime(datetime.datetime(int(data[3]),int(data[4]),int(data[5]),int(data[6]),int(data[7]),int(data[8])).timetuple())
-            ioloop.add_callback(ioloop.add_timeout,timestamp,change_pin,pin,value)
-        elif data[2] == "in":
-            timestamp = int(data[3])*3600+int(data[4])*60+int(data[5])
-            ioloop.add_callback(ioloop.call_later,timestamp,change_pin,pin,value)
+            ioloop.add_callback(setTimmer,timestamp,pin,value,message)
+        elif id == "rulein":
+            value = int(data[1])
+            pin = int(data[0])
+            timestamp = time.time()+int(data[3])*3600+int(data[4])*60+int(data[5])
+            ioloop.add_callback(setTimmer,timestamp,pin,value,message)
 
     def on_close(self):
         print('connection closed\n')
         clients.remove(self)
+
+def setTimmer(timestamp,pin,value,message):
+    id = len(rules)
+    rules.append(ioloop.add_timeout(timestamp,callback,pin,value,id))
+    send_message(message+"_"+str(id))
+
+def callback(pin,value,id):
+    change_pin(pin,value)
+    send_message("remove_"+str(id))
 
 def change_pin(pin,value):
     GPIO.output(outputs[pin],not(value))
@@ -78,6 +100,8 @@ def loadPage(url):
     print("error loading page")
 
 try:
+    print('Uploading IP')
+    loadPage("http://www.walkers-webs.com/Raspberry-pi/ip.php")
     webapp = tornado.web.Application([
         (r"/", MainHandler),
     ])
@@ -89,6 +113,9 @@ try:
     print("starting")
     ioloop = tornado.ioloop.IOLoop.current()
     tornado.ioloop.PeriodicCallback(check_button,200).start()
+    GPIO.output(outputs,False)
+    time.sleep(2)
+    GPIO.output(outputs,True)
     ioloop.start()
 except KeyboardInterrupt:
     pass
