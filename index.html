@@ -1,16 +1,35 @@
 <html>
-<head>
-  <title>smart outlet</title>
-<style>
+  <head>
+    <title>smart outlet</title>
+    <style>
+html, body {
+  width:100%;
+  height:100%;
+  padding:0px;
+  margin:0px;
+}
+
 input[type=text] {
   width:90px;
 }
-#offline {
-  text-align: center;
-  color: red;
+
+#hide {
+  display:block;
+  background:grey;
+  position:absolute;
+  left:0px;
+  top:0px;
+  width:100%;
+  height:100%;
+  z-index:10;
 }
-</style>
-<script>
+
+#hide h1 {
+  text-align:center;
+  color:red;
+}
+    </style>
+    <script>
 var values = [false, false, false];
 
 function sendValue(value){
@@ -19,24 +38,35 @@ function sendValue(value){
 }
 
 function setup() {
+  d = new Date();
+  y = d.getFullYear()
+  m = d.getMonth()+1
+  d = d.getDate()
+  document.getElementById("date").value = y+"/"+m+"/"+d;
+
   window.WebSocket = window.WebSocket || window.MozWebSocket;
   ip = window.location.hostname;
   ws = new WebSocket('ws://'+ip+':8083/ws');
-
-  ws.onopen = function () {
-    document.getElementById("offline").style.display = "none";
+  ws.onopen = function() {
+    document.getElementById("hide").style.display = "none";
+  }
+  ws.onclose = function () {
+    document.getElementById("hide").style.display = "block";
+    alert("connection closed!");
   };
-
   ws.onmessage = function (evt) {
     console.log("recived: "+evt.data);
     data = evt.data.split("_");
-    updateButton(data[0],((data[1] == "1") ? true : false));
-  };
-
-  ws.onclose = function () {
-    document.getElementById("offline").style.display = "block";
+    if (data[0] == "remove") {
+      removeRule(data[1]);
+    } else if (data.length == 2) {
+      updateButton(data[0],((data[1] == "1") ? true : false));
+    } else {
+      addRule(evt.data);
+    }
   };
 }
+
 function updateButton(num,value) {
   values[num] = value;
   if (value) {
@@ -50,22 +80,16 @@ function updateButton(num,value) {
 
 function add(){
   type = document.getElementById("type").value;
-  date = document.getElementById("date").value;
-  Sdate = date.split("/");
-  time = document.getElementById("time").value;
-  Stime = time.split(":");
+  date = document.getElementById("date").value.split("/");
+  time = document.getElementById("time").value.split(":");
   if (Stime.length != 3) {return}
   plug = document.getElementById("plug").value;
-  state = document.getElementById("state").value;
-  Sstate = (state == "on") ? 1 :0;
-  rules = document.getElementById("rules");
+  state = (document.getElementById("state").value == "on")*1;
   if (type == "on") {
     if (Sdate.length != 3) {return}
-    sendValue(plug+"_"+Sstate+"_on_"+Sdate[0]+"_"+Sdate[1]+"_"+Sdate[2]+"_"+Stime[0]+"_"+Stime[1]+"_"+Stime[2]);
-    rules.innerHTML += "<br>plug <b>"+(Number(plug)+1)+"</b> will turn <b>"+state+"</b> on "+date+" at "+ time;
+    sendValue("ruleon_"+plug+"_"+state+"_on_"+date[0]+"_"+date[1]+"_"+date[2]+"_"+time[0]+"_"+time[1]+"_"+time[2]);
   } else {
-    sendValue(plug+"_"+Sstate+"_in_"+Stime[0]+"_"+Stime[1]+"_"+Stime[2]);
-    rules.innerHTML += "<br>plug <b>"+(Number(plug)+1)+"</b> will turn <b>"+state+"</b> in "+ time;
+    sendValue("rulein_"+plug+"_"+state+"_in_"+time[0]+"_"+time[1]+"_"+time[2]);
   }
 }
 
@@ -73,37 +97,62 @@ function disable() {
   type = document.getElementById("type").value;
   document.getElementById("date").disabled = (type == "in");
 }
-</script>
-</head>
-<body onload="setup()">
-  <h1 id="offline">NOT CONNECTED!</h1>
-  outlet 1 is <b><span id="v0">OFF</span></b>: 
-  <input type="button" id="b0" value="turn ON?" onClick="sendValue('0_'+((values[0] == true) ? '0' : '1'));"><br>
 
-  outlet 2 is <b><span id="v1">OFF</span></b>: 
-  <input type="button" id="b1" value="turn ON?" onClick="sendValue('1_'+((values[1] == true) ? '0' : '1'));"><br>
+function addRule(str) {
+  rules = document.getElementById("rules");
+  data = str.split("_");
+  if (data[3] == "on") {
+    id = data[10];
+    date = data[4]+"/"+data[5]+"/"+data[6];
+    time = data[7]+":"+data[8]+":"+data[9];
+    rules.innerHTML += "<span id='rule"+id+"'><br>Plug <b>"+(Number(data[1])+1)+"</b> will turn <b>"+((data[2] == "1") ? "ON" : "OFF")+"</b> on "+date+" at "+time+"<input type='button' value='Remove' onClick='sendValue(\"remove_"+id+"\");'></span>";
+  } else {
+    id = data[7];
+    time = data[4]+":"+data[5]+":"+data[6];
+    rules.innerHTML += "<span id='rule"+id+"'><br>plug <b>"+(Number(data[1])+1)+"</b> will turn <b>"+((data[2] == "1") ? "ON" : "OFF")+"</b> in "+time+"<input type='button' value='Remove' onClick='sendValue(\"remove_"+id+"\");'></span>";;
+  }
+}
 
-  outlet 3 is <b><span id="v2">OFF</span></b>: 
-  <input type="button" id="b2" value="turn ON?" onClick="sendValue('2_'+((values[2] == true) ? '0' : '1'));"><br>
-  <br>
-  <select id="type" onchange="disable();">
-    <option value="on">At Time</option>
-    <option value="in">In Time</option>
-  </select>
-  plug #:
-  <select id="plug">
-    <option value="0">1</option>
-    <option value="1">2</option>
-    <option value="2">3</option>
-  </select>
-  value: <select id="state">
-    <option value="on">on</option>
-    <option value="off">off</option>
-  </select><br>
-  Date (yyyy/mm/dd):<input type="text" id="date">
-  Time (hh:mm:ss):<input type="text" id="time">
-  <input type="submit" onclick="add()" value="Add">
-  <div id="rules">
-  </div>
-</body>
+function removeRule(id) {
+  //sendValue("remove_"+id);
+  parent = document.getElementById("rules");
+  child = document.getElementById("rule"+id);
+  parent.removeChild(child);
+}
+    </script>
+  </head>
+  <body onload="setup()">
+    <div id="hide"><h1>Not Connected!</h1></div>
+
+    outlet 1 is <b><span id="v0">OFF</span></b>: 
+    <input type="button" id="b0" value="turn ON?" onClick="sendValue('set_0_'+((values[0] == true) ? '0' : '1'));"><br>
+
+    outlet 2 is <b><span id="v1">OFF</span></b>: 
+    <input type="button" id="b1" value="turn ON?" onClick="sendValue('set_1_'+((values[1] == true) ? '0' : '1'));"><br>
+
+    outlet 3 is <b><span id="v2">OFF</span></b>: 
+    <input type="button" id="b2" value="turn ON?" onClick="sendValue('set_2_'+((values[2] == true) ? '0' : '1'));">
+    <br>
+    <input type="button" value="exit" onclick="sendValue('exit_1');">
+    <br>
+    <select id="type" onchange="disable();">
+      <option value="on">At Time</option>
+      <option value="in">In Time</option>
+    </select>
+    plug #:
+    <select id="plug">
+      <option value="0">1</option>
+      <option value="1">2</option>
+      <option value="2">3</option>
+    </select>
+    value: <select id="state">
+      <option value="on">on</option>
+      <option value="off">off</option>
+    </select><br>
+    Date (yyyy/mm/dd):<input type="text" id="date">
+    Time (hh:mm:ss):<input type="text" id="time">
+    <input type="submit" onclick="add()" value="Add">
+    <div id="rules">
+    </div>
+  </body>
 </html>
