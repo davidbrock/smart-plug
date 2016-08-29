@@ -7,17 +7,20 @@ import urllib
 import time
 import datetime
 
+wsport = 8083   #websocket port
+wbport = 8082   #web page port
 inputs = [23,24,25]
 outputs = [4,17,27]
+
 old = [True,True,True]
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(outputs,GPIO.OUT)
 GPIO.setup(inputs,GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.output(outputs,True)
 states = [False,False,False]
-
 clients = []
 rules = []
+old = [True,True,True]
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -100,16 +103,14 @@ def loadPage(url):
     print("error loading page")
 
 try:
-    print('Uploading IP')
-    loadPage("http://www.walkers-webs.com/Raspberry-pi/ip.php")
     webapp = tornado.web.Application([
         (r"/", MainHandler),
     ])
     websocket = tornado.web.Application([
         (r"/ws", WSHandler),
     ])
-    webapp.listen(8082)
-    websocket.listen(8083)
+    webapp.listen(wbport)
+    websocket.listen(wsport)
     print("starting")
     ioloop = tornado.ioloop.IOLoop.current()
     tornado.ioloop.PeriodicCallback(check_button,200).start()
