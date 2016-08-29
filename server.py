@@ -24,7 +24,7 @@ old = [True,True,True]
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        f = open("/home/pi/smart-plug/index.html").read()
+        f = open("index.html").read()
         self.write(f)
 
 class WSHandler(tornado.websocket.WebSocketHandler):
