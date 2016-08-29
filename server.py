@@ -7,20 +7,24 @@ import urllib
 import time
 import datetime
 
-inputs = ["CSID3","CSID4","CSID5"]
+wsport = 8073   #websocket port
+wbport = 8072   #webpage port
+
+inputs = ["XIO-P0","XIO-P1","XIO-P2"]
 outputs = ["CSID0","CSID1","CSID2"]
+
 for i in range(len(outputs)):
     GPIO.setup(outputs[i],GPIO.OUT)
-    GPIO.setup(inputs[i],GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(inputs[i],GPIO.IN)
     GPIO.output(outputs[i],True)
 states = [False,False,False]
-
 clients = []
 rules = []
+old = [True,True,True]
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        f = open("/home/pi/smart-plug/index.html").read()
+        f = open("index.html").read()
         self.write(f)
 
 class WSHandler(tornado.websocket.WebSocketHandler):
@@ -84,7 +88,7 @@ def send_message(message):
 
 def check_button():
     for i in range(0,3):
-        v = GPIO.input(inputs[i])
+        v = not(GPIO.input(inputs[i]))
         if (v)and(not old[i]):
             change_pin(i,int(not(states[i])))
         old[i] = v
@@ -99,16 +103,14 @@ def loadPage(url):
     print("error loading page")
 
 try:
-    print('Uploading IP')
-    loadPage("http://www.walkers-webs.com/Raspberry-pi/ip.php")
     webapp = tornado.web.Application([
         (r"/", MainHandler),
     ])
     websocket = tornado.web.Application([
         (r"/ws", WSHandler),
     ])
-    webapp.listen(8082)
-    websocket.listen(8083)
+    webapp.listen(wbport)
+    websocket.listen(wsport)
     print("starting")
     ioloop = tornado.ioloop.IOLoop.current()
     tornado.ioloop.PeriodicCallback(check_button,200).start()
